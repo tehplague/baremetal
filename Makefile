@@ -202,6 +202,6 @@ xaxis : kernel32.bin kernel64.bin
 
 # housekeeping
 clean :
-	-rm *.o *.o32 *.o64 *.symbols *.section *.bin *.elf64 .depend config.inc tags
+	-rm -f *.o *.o32 *.o64 *.symbols *.section *.bin *.elf64 .depend config.inc tags
 
 .PHONY : default help debug q32 q64 s32 s64 kernel32 kernel64 clean depend version.tmp
