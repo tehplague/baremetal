@@ -1,0 +1,13 @@
+tags
+.depend
+*.o
+*.o32
+*.o64
+config.inc
+kernel32.bin
+kernel64.symbols
+kernel64.bin
+kernel64.section
+kernel64.elf64
+kernel64.bin
+version.h
