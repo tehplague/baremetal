@@ -1,0 +1,104 @@
+
+                                   multiboot
+                                   =========
+
+This is a small and simple kernel experiment to check a few things about
+multiboot [1]. It is based on Bran's Kernel Development Tutorial [2] for the 32
+bit loader and the C part. The ELF32-Multiboot sequence is from [3], the 64 bit
+switch from [4] and the technique for packaging 64 bit code into an
+ELF32/Multiboot image is taken from [5]. Also helpful is [6].
+
+
+The 32 bit binary multiboot image 
+--------------------------------- 
+
+As described in the tutorial [2], the 32 bit version is build binary multiboot
+image.  The Assembler stub start32.asm is compiled (correctly: assembled) into
+a a.out object file and the C files are compiled into ELF32 objects. These are
+linked with the linker script link32.ld to a binary format kernel32.bin which
+includes the multiboot sequence. The Makefile is used:
+
+ $ make kernel32.bin
+ $ make q32
+
+QEmu and Grub (legacy) should be able to boot this Multiboot/ELF32 image.
+
+The Memory layout uses identity paging (virtual address == physical address),
+the image is loaded at 0x100000 (1 MB) and started at this offset. The
+Assembler code only sets up some needed registers and jumps to the C main()
+function. All strait forward.
+
+
+The 64 bit kernel in an ELF32 multiboot image
+---------------------------------------------
+
+As Grub legacy (installed on most current Linux machines) and QEmu (Version !=
+0.12.5) are not able to correctly handle ELF64 kernels, a technique from [5] is
+employed to embed 64 bit code into and ELF32 multiboot image. The resulting
+kernel can be started with both all Grubs (legacy and 2) and all QEmu versions.
+However, the documentation of this method in [5] is very rough. This document
+tries to do better.
+
+The memory layout is as follows: The 64 bit kernel uses identity paging where
+virtual adresses are similar to the physical ones. Currently, the first 512
+page frames (256 MB) are mapped. This does not include any checking, if the
+physical memory behind is available! The Assembler start code (start64.asm) is
+loaded at 0x100000 (1 MB). This 32 bit code checks, if the CPU supports the 64
+bit mode (x86_64), sets up the page tables for 64 bit paging and jumps to
+Realm32. That is the entry point of the 64 bit kernel, but still in 32 bit
+mode. As nearly everything was set up by the start code, the Realm32 code only
+loads the 64 bit GDT and does the far jump to the 64 bit code at Realm64. The
+64 bit kernel is linked on his own to an ELF64 format with relocation to
+address 0x140000. This results in a statically linked, runnable piece of code
+that can be put on that memory address and run. Realm32 is just that address,
+so that the start64.asm (which is 32 bit code) jumps to the 64 bit kernel (with
+the first few bytes (instructions) still 32 bit code).
+
+From the 64 bit ELF64 kernel image, we need only some symbols and the blob of
+code.  In fact, only the symbol Realm32 (the entry point) which is the first
+byte, or 0x140000, is needed. To ease debugging, more symbols (like Realm64,
+main) can be selected.  These are extracted from the ELF64 with the help of
+readelf and processed with some python code from [5]. Finally, the 32 bit start
+code from start64.sh is assembled and linked into an ELF32/Multiboot image. The
+extracted symbols and machine code blob are linked also to this executable. The
+code comes into a section .KERNEL64 which is opaque to the ELF32 handling (like
+data).
+
+The build script build64.sh (r550) does the following:
+
+ * Configuration 
+ * Build ELF64 image kernel64.elf64
+   - use NASM for Assembler file jump64.asm
+   - use GCC for C files
+   - link ELF64 objects using link script link64.ld
+ * Extract data from ELF64
+   - first, the .KERNEL64 section data is extracted
+   - then some symbols are exported
+ * Build ELF32 stub
+   - Assemble NASM for start64.asm 
+   - Insert an additional section into the ELF32 object
+   - link this object with two linker scripts:
+        link_start64.ld : common linker script for 32 bit kernel 
+                          with additional .KERNEL64 section
+        symbols extracted from kernel64.elf64
+
+The result is an ELF32 multiboot image.
+
+The 64 bit Assembler file jump64.asm does the far jump into 64 bit mode to
+change the cs (code segment) and jump into 64 bit code at the same time.  In 64
+bit mode, the other segments are changed, a stack is initialized (at 0x140000,
+as the 32 bit code below that address is no longer needed) and finally calls
+the C main() function.  The rest is readable C code.
+
+
+
+
+References
+----------
+[1] http://www.gnu.org/software/grub/manual/multiboot/multiboot.html
+[2] http://www.osdever.net/bkerndev/Docs/creatingmain.htm
+[3] http://wiki.osdev.org/Bare_Bones
+[4] http://wiki.osdev.org/User:Stephanvanschaik/Setting_Up_Long_Mode
+[5] http://wiki.osdev.org/X86-64
+[6] http://wiki.osdev.org/Entering_Long_Mode_Directly
+

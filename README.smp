@@ -1,0 +1,31 @@
+
+                                      SMP
+                                      ===
+
+The bootstrap processor (BSP) brings up a single processor in the target mode
+(32 or 64 bit).  Before that, during startup in real-mode, the BIOS tables from
+ACPI and Multiprocessor Specification are checked and their information about
+available processors and APICs is stored in the local hw_info structure. In the main
+kernel, the subsystems are initialized. Among them, the module apic.c initializes
+the local APIC and brings up the application processors (APs).
+
+Via the local APIC, interprocessor interrupts (IPIs) are sent from the BSP to
+the APs.  In the IPI message, a startup page is sent. This can be any 4k Page
+below 1 MB (obviously minus the BIOS ROM areas, effectively below 640 kB). 
+
+Page 0 (0x00000..0x01000) is skipped. After that, the first page tables for the
+booting process are placed until the memory management is initialized.
+Currently, Page 0x88 is selected as booting page (config.h).
+
+The kernel is loaded by multiboot above 1 MB which is not accessible in 16 bit
+mode, so the bootstap code must be copied to that page. In the 64 bit kernel,
+the code is placed in jump64.asm, because the early 32 bit code is not
+accessible in the actual kernel. Further on, the code must be position
+independent code or already be relocated to the target page. This is realized
+by using segments in 16 bit mode and calculating the offset from the beginning
+label of the code. In 32 bit mode, the offset of the smp start page is
+included. The common code for both architectures is in start_smp.inc which is
+included directly in start32.asm and jump64.asm. The file ends with a label so
+that the APs leave the included file in 32 bit protected mode. The 32 bit
+kernel just jumps to main_smp() function. The 64 bit kernel activates long mode
+and jumps also to the same function.
