@@ -86,7 +86,7 @@ config.inc : config.h
 # PHONY: update temp file in any case
 version.tmp :
 	@echo "UPDATE version.tmp"
-	@echo '#define SVN_REV "'$$(svnversion)'"' > version.tmp
+	@echo '#define SVN_REV "'$$(git rev-parse HEAD | awk '{ print substr($$0, 1, 7); }')'"' > version.tmp
 	@echo '#define OPT "'$(OPT)'"' >> version.tmp
 
 # only if tmp and h differ: update version.h
