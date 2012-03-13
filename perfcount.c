@@ -21,6 +21,8 @@
 #include "cpu.h"
 #include "info.h"
 
+static uint8_t __perfcount_error_shown = 0;
+
 static uint32_t __perfcount_perfevtsel_nehalem[4] = {0x186u, 0x187u, 0x188u, 0x189u};
 static uint32_t __perfcount_pmc_nehalem[4]        = {0x0C1u, 0x0C2u, 0x0C3u, 0x0C4u};
 static uint32_t __perfcount_globalctrl_nehalem    = 0x38Fu;
@@ -162,8 +164,12 @@ void perfcount_init(unsigned int counter, uint64_t config) {
     __perfcount_init_nehalem(counter, config);
   } 
   else {
+    if (__perfcount_error_shown == 1)
+      return;
+
     printf("perfcount: warning: PMC either unsupported, but at least not implemented\n");
     printf("perfcount: do not rely on returned results\n");
+    __perfcount_error_shown = 1;
   }
 }
 
@@ -172,8 +178,12 @@ uint64_t perfcount_raw(uint8_t event, uint8_t umask) {
 }
 
 void perfcount_start(unsigned int counter) {
+  if (__perfcount_error_shown == 1)
+    return;
+
   if (!__perfcount_start) {
     printf("perfcount: warning: PMC is not initialized or unsupported\n");
+    __perfcount_error_shown = 1;
     return;
   }
 
@@ -181,8 +191,12 @@ void perfcount_start(unsigned int counter) {
 }
 
 void perfcount_stop(unsigned int counter) {
+  if (__perfcount_error_shown == 1)
+    return;
+
   if (!__perfcount_stop) {
     printf("perfcount: warning: PMC is not initialized or unsupported\n");
+    __perfcount_error_shown = 1;
     return;
   }
 
@@ -190,8 +204,12 @@ void perfcount_stop(unsigned int counter) {
 }
 
 void perfcount_reset(unsigned int counter) {
+  if (__perfcount_error_shown == 1)
+    return;
+
   if (!__perfcount_reset) {
     printf("perfcount: warning: PMC is not initialized or unsupported\n");
+    __perfcount_error_shown = 1;
     return;
   }
 
@@ -199,9 +217,11 @@ void perfcount_reset(unsigned int counter) {
 }
 
 uint64_t perfcount_read(unsigned int counter) {
-  if (!__perfcount_read) {
+  if (__perfcount_error_shown == 1)
+    return 0;
+
+  if (!__perfcount_read)
     return 0; 
-  }
 
   return __perfcount_read(counter);
 }
