@@ -40,66 +40,116 @@ static void __perfcount_init_nehalem(uint8_t counter, uint64_t config) {
   uint64_t event_sel;
   uint64_t global_ctrl;
 
-  if (counter >= 3) {
-    printf("Nehalem only has 4 performance counters\n");
+  if (counter == PERFCOUNT_CORE_PMC(counter)) {
+    if (counter >= 3) {
+      printf("Nehalem only has 4 performance counters\n");
+      return;
+    }
+
+    // Map common configuration values to Nehalem ones (very simple mapping as Nehalem is the architecture that is mostly used)
+    if (config >= 0xFF000000ull)
+      config &= 0xFFFFull;
+    event_sel = config | (1 << 17 /* IA32_PERFEVTSEL_OS */) | (1 << 16 /* IA32_PERFEVTSEL_USR */); 
+
+    // Initialize PMC
+    global_ctrl = rdmsr(__perfcount_globalctrl_nehalem);
+    global_ctrl |= (1 << counter);
+    wrmsr(__perfcount_globalctrl_nehalem, global_ctrl);
+
+    // Write but leave the counter in disabled state
+    wrmsr(__perfcount_perfevtsel_nehalem[counter], event_sel);
+    
+    // Reset PMC
+    __perfcount_reset_nehalem(counter);
+  }
+  else if (counter == PERFCOUNT_UNCORE_PMC(counter)) {
+    printf("Uncore PMCs not (yet) supported. Sorry\n");
     return;
   }
-
-  // Map common configuration values to Nehalem ones (very simple mapping as Nehalem is the architecture that is mostly used)
-  if (config >= 0xFF000000ull)
-    config &= 0xFFFFull;
-  event_sel = config | (1 << 17 /* IA32_PERFEVTSEL_OS */) | (1 << 16 /* IA32_PERFEVTSEL_USR */); 
-
-  // Initialize PMC
-  global_ctrl = rdmsr(__perfcount_globalctrl_nehalem);
-  global_ctrl |= (1 << counter);
-  wrmsr(__perfcount_globalctrl_nehalem, global_ctrl);
-
-  // Write but leave the counter in disabled state
-  wrmsr(__perfcount_perfevtsel_nehalem[counter], event_sel);
-  
-  // Reset PMC
-  __perfcount_reset_nehalem(counter);
+  else {
+    printf("Unknown PMC type!\n");
+    return;
+  }
 }
 
 static void __perfcount_start_nehalem(uint8_t counter) {
-  if (counter >= 3) {
-    printf("Nehalem only has 4 performance counters\n");
+  if (counter == PERFCOUNT_CORE_PMC(counter)) {
+    if (counter >= 3) {
+      printf("Nehalem only has 4 performance counters\n");
+      return;
+    }
+
+    uint64_t event_sel = rdmsr(__perfcount_perfevtsel_nehalem[counter]);
+    event_sel |= (1 << 22 /* IA32_PERFEVTSEL_EN */);
+    wrmsr(__perfcount_perfevtsel_nehalem[counter], event_sel);
+  }
+  else if (counter == PERFCOUNT_UNCORE_PMC(counter)) {
+    printf("Uncore PMCs not (yet) supported. Sorry\n");
     return;
   }
-
-  uint64_t event_sel = rdmsr(__perfcount_perfevtsel_nehalem[counter]);
-  event_sel |= (1 << 22 /* IA32_PERFEVTSEL_EN */);
-  wrmsr(__perfcount_perfevtsel_nehalem[counter], event_sel);
+  else {
+    printf("Unknown PMC type!\n");
+    return;
+  }
 }
 
 static void __perfcount_stop_nehalem(uint8_t counter) {
-  if (counter >= 3) {
-    printf("Nehalem only has 4 performance counters\n");
+  if (counter == PERFCOUNT_CORE_PMC(counter)) {
+    if (counter >= 3) {
+      printf("Nehalem only has 4 performance counters\n");
+      return;
+    }
+
+    uint64_t event_sel = rdmsr(__perfcount_perfevtsel_nehalem[counter]);
+    event_sel &= ~(1 << 22 /* IA32_PERFEVTSEL_EN */);
+    wrmsr(__perfcount_perfevtsel_nehalem[counter], event_sel);
+  }
+  else if (counter == PERFCOUNT_UNCORE_PMC(counter)) {
+    printf("Uncore PMCs not (yet) supported. Sorry\n");
     return;
   }
-
-  uint64_t event_sel = rdmsr(__perfcount_perfevtsel_nehalem[counter]);
-  event_sel &= ~(1 << 22 /* IA32_PERFEVTSEL_EN */);
-  wrmsr(__perfcount_perfevtsel_nehalem[counter], event_sel);
+  else {
+    printf("Unknown PMC type!\n");
+    return;
+  }
 }
 
 static void __perfcount_reset_nehalem(uint8_t counter) {
-  if (counter >= 3) {
-    printf("Nehalem only has 4 performance counters\n");
+  if (counter == PERFCOUNT_CORE_PMC(counter)) {
+    if (counter >= 3) {
+      printf("Nehalem only has 4 performance counters\n");
+      return;
+    }
+
+    wrmsr(__perfcount_pmc_nehalem[counter], 0);
+  }
+  else if (counter == PERFCOUNT_UNCORE_PMC(counter)) {
+    printf("Uncore PMCs not (yet) supported. Sorry\n");
     return;
   }
-
-  wrmsr(__perfcount_pmc_nehalem[counter], 0);
+  else {
+    printf("Unknown PMC type!\n");
+    return;
+  }
 }
 
 static uint64_t __perfcount_read_nehalem(uint8_t counter) {
-  if (counter >= 3) {
-    printf("Nehalem only has 4 performance counters\n");
+  if (counter == PERFCOUNT_CORE_PMC(counter)) {
+    if (counter >= 3) {
+      printf("Nehalem only has 4 performance counters\n");
+      return 0;
+    }
+
+    return rdmsr(__perfcount_pmc_nehalem[counter]);
+  }
+  else if (counter == PERFCOUNT_UNCORE_PMC(counter)) {
+    printf("Uncore PMCs not (yet) supported. Sorry\n");
     return 0;
   }
-
-  return rdmsr(__perfcount_pmc_nehalem[counter]);
+  else {
+    printf("Unknown PMC type!\n");
+    return 0;
+  }
 }
 
 void perfcount_init(unsigned int counter, uint64_t config) {
