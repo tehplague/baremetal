@@ -31,10 +31,10 @@
 void perfcount_init(unsigned int counter, uint64_t config);
 uint64_t perfcount_raw(uint8_t event, uint8_t umask);
 
-void perfcount_start(uint8_t counter);
-void perfcount_stop(uint8_t counter);
-void perfcount_reset(uint8_t counter);
-uint64_t perfcount_read(uint8_t counter);
+void perfcount_start(unsigned int counter);
+void perfcount_stop(unsigned int counter);
+void perfcount_reset(unsigned int counter);
+uint64_t perfcount_read(unsigned int counter);
 
 #endif
 
