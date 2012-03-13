@@ -117,8 +117,8 @@ void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag)
     uint64_t t1, t2, cnt=0;
     uint64_t pc_cache;
 
-    perfcount_reset(0);
-    perfcount_start(0);
+    perfcount_reset(PERFCOUNT_CORE_PMC(0));
+    perfcount_start(PERFCOUNT_CORE_PMC(0));
     t1 = rdtsc();
     while (!flag_trywait(flag)) {
         for (s=0; s<size/sizeof(mytype); s+=(stride/sizeof(mytype))) {
@@ -127,8 +127,8 @@ void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag)
         }
     }
     t2 = rdtsc();
-    perfcount_stop(0);
-    printf(" [%#uB/s %u]", (((cnt*hw_info.tsc_per_usec*1000)/(t2-t1))*1000u)&~0xFFFFF, perfcount_read(0));
+    perfcount_stop(PERFCOUNT_CORE_PMC(0));
+    printf(" [%#uB/s %u]", (((cnt*hw_info.tsc_per_usec*1000)/(t2-t1))*1000u)&~0xFFFFF, perfcount_read(PERFCOUNT_CORE_PMC(0)));
     // round last 20 bit (set to zero) so that %#u can work
 
 }
@@ -439,7 +439,7 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t
         if (myid==0)  {
             printf("1 worker on range %#uB, load on range 16 kB .. 16 MB -------------------\n", worker_size);
         } else {
-            perfcount_init(0, PERFCOUNT_L2); 
+            perfcount_init(PERFCOUNT_CORE_PMC(0), PERFCOUNT_L2); 
         }
 
         if (collective_only(0x0003)) {

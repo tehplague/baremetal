@@ -25,6 +25,9 @@
 #define PERFCOUNT_L2        (uint64_t)0xFF000224ull
 #define PERFCOUNT_L3        (uint64_t)0xFF000309ull
 
+#define PERFCOUNT_CORE_PMC(n)   (n & 0xFF)
+#define PERFCOUNT_UNCORE_PMC(n) (n | 0x100)
+
 void perfcount_init(unsigned int counter, uint64_t config);
 uint64_t perfcount_raw(uint8_t event, uint8_t umask);
 
