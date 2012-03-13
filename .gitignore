@@ -1,5 +1,6 @@
 tags
 .depend
+.*.swp
 *.o
 *.o32
 *.o64
